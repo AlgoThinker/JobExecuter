@@ -7,11 +7,26 @@ import java.util.concurrent.Executors;
 
 public class JobRunner {
     public static void main(String[] args) {
-        // Define the steps
-        Step stepA = new Step("A", () -> System.out.println("Executing A"), Collections.emptyList());
-        Step stepB = new Step("B", () -> System.out.println("Executing B"), Collections.emptyList());
-        Step stepC = new Step("C", () -> System.out.println("Executing C"), Arrays.asList("A"));
-        Step stepD = new Step("D", () -> System.out.println("Executing D"), Arrays.asList("B", "C"));
+        // Define the steps with simulated work using sleep
+        Step stepA = new Step("A", () -> {
+            sleep(1000);
+            System.out.println("Executing A");
+        }, Collections.emptyList());
+
+        Step stepB = new Step("B", () -> {
+            sleep(1000);
+            System.out.println("Executing B");
+        }, Collections.emptyList());
+
+        Step stepC = new Step("C", () -> {
+            sleep(1000);
+            System.out.println("Executing C");
+        }, Arrays.asList("A"));
+
+        Step stepD = new Step("D", () -> {
+            sleep(1000);
+            System.out.println("Executing D");
+        }, Arrays.asList("B", "C"));
 
         // Create a thread pool with a fixed number of threads
         ExecutorService executorService = Executors.newFixedThreadPool(4);
@@ -24,5 +39,13 @@ public class JobRunner {
 
         // Shutdown the executor service
         executorService.shutdown();
+    }
+
+    private static void sleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 }

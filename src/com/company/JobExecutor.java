@@ -1,10 +1,11 @@
 package com.company;
 
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-
 public class JobExecutor {
     private final Map<String, Step> steps = new HashMap<>();
     private final Map<String, CompletableFuture<Void>> futures = new ConcurrentHashMap<>();
@@ -36,7 +37,14 @@ public class JobExecutor {
             }
 
             return CompletableFuture.allOf(dependencyFutures.toArray(new CompletableFuture[0]))
-                    .thenRunAsync(step.getTask(), executor);
+                    .thenRunAsync(() -> {
+                        String threadName = Thread.currentThread().getName();
+                        String time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss.SSS"));
+                        System.out.printf("[%s] Starting Step %s on Thread %s%n", time, step.getId(), threadName);
+                        step.getTask().run();
+                        String endTime = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss.SSS"));
+                        System.out.printf("[%s] Completed Step %s on Thread %s%n", endTime, step.getId(), threadName);
+                    }, executor);
         });
     }
 }
