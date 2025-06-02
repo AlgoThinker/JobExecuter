@@ -1,51 +1,23 @@
 package com.company;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 public class JobRunner {
     public static void main(String[] args) {
-        // Define the steps with simulated work using sleep
-        Step stepA = new Step("A", () -> {
-            sleep(1000);
-            System.out.println("Executing A");
-        }, Collections.emptyList());
+        JobExecutor jobExecutor = new JobExecutor(4);
 
-        Step stepB = new Step("B", () -> {
-            sleep(1000);
-            System.out.println("Executing B");
-        }, Collections.emptyList());
+        Step stepA = new Step("A", "do something");
+        Step stepB = new Step("B", "upload some file");
+        Step stepC = new Step("C", "download some file");
+        Step stepD = new Step("D", "do something else");
 
-        Step stepC = new Step("C", () -> {
-            sleep(1000);
-            System.out.println("Executing C");
-        }, Arrays.asList("A"));
+        jobExecutor.addTask(stepA);
+        jobExecutor.addTask(stepB);
+        jobExecutor.addTask(stepC);
+        jobExecutor.addTask(stepD);
 
-        Step stepD = new Step("D", () -> {
-            sleep(1000);
-            System.out.println("Executing D");
-        }, Arrays.asList("B", "C"));
+        jobExecutor.addDependency("C", "A"); // C depends on A
+        jobExecutor.addDependency("D", "B"); // D depends on B
+        jobExecutor.addDependency("D", "C"); // D depends on C
 
-        // Create a thread pool with a fixed number of threads
-        ExecutorService executorService = Executors.newFixedThreadPool(4);
-
-        // Initialize the job executor with the steps and executor service
-        JobExecutor jobExecutor = new JobExecutor(Arrays.asList(stepA, stepB, stepC, stepD), executorService);
-
-        // Execute the job
         jobExecutor.execute();
-
-        // Shutdown the executor service
-        executorService.shutdown();
-    }
-
-    private static void sleep(long millis) {
-        try {
-            Thread.sleep(millis);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
     }
 }
