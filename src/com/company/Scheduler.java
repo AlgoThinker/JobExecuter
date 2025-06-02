@@ -2,6 +2,8 @@ package com.company;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
 class Scheduler {
     private final Map<String, Task> taskMap = new ConcurrentHashMap<>();
     private final ExecutorService executor;
@@ -26,6 +28,8 @@ class Scheduler {
     }
 
     public void execute() {
+        AtomicInteger activeTasks = new AtomicInteger(0);
+
         // Initialize ready queue with tasks having zero in-degree
         for (Task task : taskMap.values()) {
             System.out.println("Task " + task.getId() + " has inDegree: " + task.getInDegree());
@@ -36,19 +40,26 @@ class Scheduler {
         }
 
         // Process tasks
-        while (!readyQueue.isEmpty()) {
+        while (!readyQueue.isEmpty() || activeTasks.get() > 0) {
             Task task = readyQueue.poll();
-            executor.submit(() -> {
-                task.execute();
-                for (Task dependent : task.getDependents()) {
-                    int newInDegree = dependent.decrementInDegree();
-                    System.out.println("Task " + dependent.getId() + " new inDegree: " + newInDegree);
-                    if (newInDegree == 0) {
-                        readyQueue.add(dependent);
-                        System.out.println("Task " + dependent.getId() + " added to readyQueue.");
+            if (task != null) {
+                activeTasks.incrementAndGet();
+                executor.submit(() -> {
+                    try {
+                        task.execute();
+                        for (Task dependent : task.getDependents()) {
+                            int newInDegree = dependent.decrementInDegree();
+                            System.out.println("Task " + dependent.getId() + " new inDegree: " + newInDegree);
+                            if (newInDegree == 0) {
+                                readyQueue.add(dependent);
+                                System.out.println("Task " + dependent.getId() + " added to readyQueue.");
+                            }
+                        }
+                    } finally {
+                        activeTasks.decrementAndGet();
                     }
-                }
-            });
+                });
+            }
         }
 
         // Shutdown executor
@@ -60,4 +71,5 @@ class Scheduler {
             Thread.currentThread().interrupt();
         }
     }
+
 }
