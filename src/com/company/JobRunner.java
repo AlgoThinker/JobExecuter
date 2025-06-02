@@ -1,23 +1,22 @@
 package com.company;
-
 public class JobRunner {
     public static void main(String[] args) {
-        JobExecutor jobExecutor = new JobExecutor(4);
+        Scheduler scheduler = new Scheduler(4);
 
-        Step stepA = new Step("A", "do something");
-        Step stepB = new Step("B", "upload some file");
-        Step stepC = new Step("C", "download some file");
-        Step stepD = new Step("D", "do something else");
+        Task taskA = new Task("A", "do something");
+        Task taskB = new Task("B", "upload some file");
+        Task taskC = new Task("C", "download some file");
+        Task taskD = new Task("D", "do something else");
 
-        jobExecutor.addTask(stepA);
-        jobExecutor.addTask(stepB);
-        jobExecutor.addTask(stepC);
-        jobExecutor.addTask(stepD);
+        scheduler.addTask(taskA);
+        scheduler.addTask(taskB);
+        scheduler.addTask(taskC);
+        scheduler.addTask(taskD);
 
-        jobExecutor.addDependency("C", "A"); // C depends on A
-        jobExecutor.addDependency("D", "B"); // D depends on B
-        jobExecutor.addDependency("D", "C"); // D depends on C
+        scheduler.addDependency("C", "A"); // C depends on A
+        scheduler.addDependency("D", "B"); // D depends on B
+        scheduler.addDependency("D", "C"); // D depends on C
 
-        jobExecutor.execute();
+        scheduler.execute();
     }
 }
