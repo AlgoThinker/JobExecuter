@@ -2,74 +2,46 @@ package com.company;
 
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
 class Scheduler {
-    private final Map<String, Task> taskMap = new ConcurrentHashMap<>();
     private final ExecutorService executor;
-    private final BlockingQueue<Task> readyQueue = new LinkedBlockingQueue<>();
 
     public Scheduler(int threadCount) {
         this.executor = Executors.newFixedThreadPool(threadCount);
     }
 
-    public void addTask(Task task) {
-        taskMap.put(task.getId(), task);
-    }
-
-    public void addDependency(String taskId, String dependencyId) {
-        Task task = taskMap.get(taskId);
-        Task dependency = taskMap.get(dependencyId);
-        if (task != null && dependency != null) {
-            task.addDependency(dependency);
-            dependency.addDependent(task);
-            System.out.println("Added dependency: " + task.getId() + " depends on " + dependency.getId());
-        }
-    }
-
-    public void execute() {
-        AtomicInteger activeTasks = new AtomicInteger(0);
-
-        // Initialize ready queue with tasks having zero in-degree
-        for (Task task : taskMap.values()) {
-            System.out.println("Task " + task.getId() + " has inDegree: " + task.getInDegree());
-            if (task.getInDegree() == 0) {
-                readyQueue.add(task);
-                System.out.println("Task " + task.getId() + " added to readyQueue.");
-            }
-        }
-
-        // Process tasks
-        while (!readyQueue.isEmpty() || activeTasks.get() > 0) {
-            Task task = readyQueue.poll();
-            if (task != null) {
-                activeTasks.incrementAndGet();
-                executor.submit(() -> {
-                    try {
-                        task.execute();
-                        for (Task dependent : task.getDependents()) {
-                            int newInDegree = dependent.decrementInDegree();
-                            System.out.println("Task " + dependent.getId() + " new inDegree: " + newInDegree);
-                            if (newInDegree == 0) {
-                                readyQueue.add(dependent);
-                                System.out.println("Task " + dependent.getId() + " added to readyQueue.");
-                            }
-                        }
-                    } finally {
-                        activeTasks.decrementAndGet();
-                    }
-                });
-            }
-        }
-
-        // Shutdown executor
-        executor.shutdown();
+    public void execute(Task rootTask) {
         try {
-            executor.awaitTermination(1, TimeUnit.HOURS);
-        } catch (InterruptedException e) {
-            executor.shutdownNow();
-            Thread.currentThread().interrupt();
+            dfs(rootTask);
+        } finally {
+            executor.shutdown();
+            try {
+                executor.awaitTermination(1, TimeUnit.HOURS);
+            } catch (InterruptedException e) {
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
+    private void dfs(Task task) {
+        List<Future<?>> futures = new ArrayList<>();
+
+        // Execute prerequisites first
+        for (Task prerequisite : task.getPrerequisites()) {
+            futures.add(executor.submit(() -> dfs(prerequisite)));
+        }
+
+        // Wait for all prerequisites to complete
+        for (Future<?> future : futures) {
+            try {
+                future.get();
+            } catch (InterruptedException | ExecutionException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("Task execution interrupted", e);
+            }
+        }
+
+        // Execute current task
+        task.execute();
+    }
 }
